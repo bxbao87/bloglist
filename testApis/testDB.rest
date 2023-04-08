@@ -22,3 +22,14 @@ Content-Type: application/json
     "likes": 1000
 }
 
+
+###
+POST http://localhost:3003/api/blogs
+Content-Type: application/json
+
+{
+    "title": "A Brief History of Time",
+    "author": "Stephen Hawking",
+    "url": "https://en.wikipedia.org/wiki/A_Brief_History_of_Time",
+    "likes": 1000
+}
