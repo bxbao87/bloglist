@@ -62,6 +62,25 @@ test('a valid blog can be added', async () => {
     )
 }, 100000)
 
+test('if the likes property is missing from the request, it will default to the value 0',
+    async () => {
+        const newBlog = {
+            "title": "Fullstackopen",
+            "author": "University of Helsinki",
+            "url": "https://fullstackopen.com/en/part4/testing_the_backend#exercises-4-8-4-12",
+        }
+
+        await api
+            .post('/api/blogs')
+            .send(newBlog)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
+
+        const response = await api.get('/api/blogs')
+        const newBlogSaved = response.body.find(b => b.title === "Fullstackopen")
+        expect(newBlogSaved.likes).toBe(0)
+    }, 100000
+)
 afterAll(async () => {
     await mongoose.connection.close()
 })
