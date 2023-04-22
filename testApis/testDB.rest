@@ -33,3 +33,12 @@ Content-Type: application/json
     "url": "https://en.wikipedia.org/wiki/A_Brief_History_of_Time",
     "likes": 1000
 }
+
+###
+POST http://localhost:3003/api/blogs
+Content-Type: application/json
+
+{
+    "url": "https://mongoosejs.com/docs/validation.html",
+    "likes": 123
+}

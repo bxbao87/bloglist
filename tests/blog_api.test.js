@@ -81,6 +81,37 @@ test('if the likes property is missing from the request, it will default to the 
         expect(newBlogSaved.likes).toBe(0)
     }, 100000
 )
+
+describe("creating new blogs with response status code 400", () => {
+    test('if the title property is missing', async () => {
+        const newBlog = {
+            "author": "University of Helsinki",
+            "url": "https://fullstackopen.com/en/part4/testing_the_backend#exercises-4-8-4-12",
+            "likes": 123456
+        }
+
+        await api
+            .post('/api/blogs')
+            .send(newBlog)
+            .expect(400)
+            
+    }, 100000)
+
+    test('if the author property is missing', async () => {
+        const newBlog = {
+            "title": "Testing the backend",
+            "url": "https://fullstackopen.com/en/part4/testing_the_backend#exercises-4-8-4-12",
+            "likes": 123457
+        }
+
+        await api
+            .post('/api/blogs')
+            .send(newBlog)
+            .expect(400)
+            
+    }, 100000)
+})
+
 afterAll(async () => {
     await mongoose.connection.close()
 })
