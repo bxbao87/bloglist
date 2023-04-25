@@ -1,27 +1,13 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
+const helper = require('./blog_helper')
 const app = require('../app')
 const api = supertest(app)
 const Blog = require('../models/blog')
 
-const initialBlogs = [
-    {
-        "title": "A Brief History of Time",
-        "author": "Stephen Hawking",
-        "url": "https://en.wikipedia.org/wiki/A_Brief_History_of_Time",
-        "likes": 1001
-    },
-    {
-        "title": "Doraemon",
-        "author": "Fujiko Fujio",
-        "url": "https://en.wikipedia.org/wiki/Doraemon_(character)",
-        "likes": 1000
-    }
-]
-
 beforeEach(async () => {
     await Blog.deleteMany({})
-    await Blog.insertMany(initialBlogs)
+    await Blog.insertMany(helper.initialBlogs)
 })
 
 test('blogs are returned as json', async () => {
@@ -53,10 +39,10 @@ test('a valid blog can be added', async () => {
         .expect(201)
         .expect('Content-Type', /application\/json/)
 
-    const response = await api.get('/api/blogs')
-    const titles = response.body.map(b => b.title)
+    const blogsAtEnd = await helper.blogsInDb()
+    const titles = blogsAtEnd.map(b => b.title)
 
-    expect(response.body).toHaveLength(initialBlogs.length + 1)
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length + 1)
     expect(titles).toContain(
         'Fullstackopen'
     )
@@ -76,8 +62,8 @@ test('if the likes property is missing from the request, it will default to the 
             .expect(201)
             .expect('Content-Type', /application\/json/)
 
-        const response = await api.get('/api/blogs')
-        const newBlogSaved = response.body.find(b => b.title === "Fullstackopen")
+        const blogsAtEnd = await helper.blogsInDb()
+        const newBlogSaved = blogsAtEnd.find(b => b.title === "Fullstackopen")
         expect(newBlogSaved.likes).toBe(0)
     }, 100000
 )
@@ -109,6 +95,41 @@ describe("creating new blogs with response status code 400", () => {
             .send(newBlog)
             .expect(400)
             
+    }, 100000)
+})
+
+describe('delete a single blog post resource', () => {
+    test('succeeds with status code 204 and the number of blogs reduces 1 if id exists', 
+    async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const blogToDelete = blogsAtStart[0]
+
+        await api
+            .delete(`/api/blogs/${blogToDelete.id}`)
+            .expect(204)
+
+        const blogsAtEnd = await helper.blogsInDb()
+        expect(blogsAtEnd).toHaveLength(blogsAtStart.length - 1)
+
+        const ids = blogsAtEnd.map(b => b.id)
+        expect(ids).not.toContain(blogToDelete.id)
+    }, 100000)
+
+    test('succeeds with status code 204 and the number of blogs stays remain if id does not exist', 
+    async () => {
+        const blogsAtStart = await helper.blogsInDb()
+
+        const id = await helper.nonExistingId()
+
+        await api
+            .delete(`/api/blogs/${id}`)
+            .expect(204)
+
+        const blogsAtEnd = await helper.blogsInDb()
+        expect(blogsAtEnd).toHaveLength(blogsAtStart.length)
+
+        const ids = blogsAtEnd.map(b => b.id)
+        expect(ids).not.toContain(id)
     }, 100000)
 })
 

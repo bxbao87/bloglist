@@ -42,3 +42,6 @@ Content-Type: application/json
     "url": "https://mongoosejs.com/docs/validation.html",
     "likes": 123
 }
+
+###
+DELETE http://localhost:3003/api/blogs/64440a3a9141e95c0497bc66
