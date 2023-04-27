@@ -45,3 +45,36 @@ Content-Type: application/json
 
 ###
 DELETE http://localhost:3003/api/blogs/64440a3a9141e95c0497bc66
+
+###
+PUT http://localhost:3003/api/blogs/642865c2974078c6130ba844
+Content-Type: application/json
+
+{
+    "title": "Harry Potter",
+    "author": "Rowling",
+    "url": "https://vi.wikipedia.org/wiki/Harry_Potter",
+    "likes": 123
+}
+
+###
+PUT http://localhost:3003/api/blogs/642865c2974078c6130ba844
+Content-Type: application/json
+
+{
+    "title": "",
+    "author": "",
+    "url": "https://vi.wikipedia.org/wiki/Harry_Potter",
+    "likes": 123
+}
+
+###
+PUT http://localhost:3003/api/blogs/64440a3a9141e95c0497bc66
+Content-Type: application/json
+
+{
+    "title": "Harry Potter",
+    "author": "Rowling",
+    "url": "https://vi.wikipedia.org/wiki/Harry_Potter",
+    "likes": 321
+}

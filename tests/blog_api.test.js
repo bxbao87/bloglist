@@ -133,6 +133,69 @@ describe('delete a single blog post resource', () => {
     }, 100000)
 })
 
+describe('Update post', () => {
+    test('exists in database, the likes will be updated', async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const blogForUpdated = blogsAtStart[0]
+
+        const newBlog = {
+            likes: blogForUpdated.likes + 10
+        }
+
+        const response = await api
+            .put(`/api/blogs/${blogForUpdated.id}`)
+            .send(newBlog)
+            .expect(200)
+
+        const blogsAtEnd = await helper.blogsInDb()
+        const updatedBlog = blogsAtEnd.find(b => b.id === blogForUpdated.id)
+
+        expect(updatedBlog.likes).toBe(newBlog.likes)
+        expect(response.body.likes).toBe(newBlog.likes)
+
+    }, 100000)
+
+    test('does not exist in database, database has no changes', async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const id = await helper.nonExistingId()
+        const newBlog = {
+            likes: 12321
+        }
+
+        const response = await api
+            .put(`/api/blogs/${id}`)
+            .send(newBlog)
+            .expect(200)
+
+        expect(response.body).toBe(null)
+
+        const blogsAtEnd = await helper.blogsInDb()
+
+        expect(blogsAtEnd).toStrictEqual(blogsAtStart)
+
+    }, 100000)
+
+    test('with existing id but invalid title and author, blog will not change', async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const blogForUpdated = blogsAtStart[0]
+
+        const newBlog = {
+            title: "",
+            likes: blogForUpdated.likes + 10
+        }
+
+        await api
+            .put(`/api/blogs/${blogForUpdated.id}`)
+            .send(newBlog)
+            .expect(400)
+
+        const blogsAtEnd = await helper.blogsInDb()
+        const updatedBlog = blogsAtEnd.find(b => b.id === blogForUpdated.id)
+
+        expect(updatedBlog.title).toBe(blogForUpdated.title)
+    }, 100000)
+})
+
 afterAll(async () => {
     await mongoose.connection.close()
 })
