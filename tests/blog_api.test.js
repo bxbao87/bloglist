@@ -1,9 +1,13 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
+const bcrypt = require('bcrypt')
+
 const helper = require('./blog_helper')
 const app = require('../app')
 const api = supertest(app)
+
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 beforeEach(async () => {
     await Blog.deleteMany({})
@@ -194,6 +198,152 @@ describe('Update post', () => {
 
         expect(updatedBlog.title).toBe(blogForUpdated.title)
     }, 100000)
+})
+
+describe('when there is initially one user in db', () => {
+    beforeEach(async () => {
+        await User.deleteMany({})
+        const passwordHash = await bcrypt.hash('c0nf!d3nti@1', 10)
+        const user = new User({ username: 'root', passwordHash })
+
+        await user.save()
+    })
+
+    test('creation succeeds with a fresh username', async () => {
+        const usersAtStart = await helper.usersInDb()
+
+        const newUser = {
+            username: 'thomas',
+            name: 'Thomas the Cat',
+            password: 'Tom',
+        }
+
+        await api
+            .post('/api/users')
+            .send(newUser)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
+
+        const usersAtEnd = await helper.usersInDb()
+        expect(usersAtEnd).toHaveLength(usersAtStart.length + 1)
+
+        const usernames = usersAtEnd.map(u => u.username)
+        expect(usernames).toContain(newUser.username)
+    })
+
+    test('creation fails with status code 400 and message if username is already taken',
+        async () => {
+            const usersAtStart = await helper.usersInDb()
+
+            const newUser = {
+                username: 'root',
+                name: 'Thomas the Cat',
+                password: 'Tom',
+            }
+
+            const result = await api
+                .post('/api/users')
+                .send(newUser)
+                .expect(400)
+                .expect('Content-Type', /application\/json/)
+
+            expect(result.body.error).toContain('expected `username` to be unique')
+
+            const usersAtEnd = await helper.usersInDb()
+            expect(usersAtEnd).toEqual(usersAtStart)
+        }
+    )
+
+    test('creation fails with status code 400 and message if username is not at least 3 characters long',
+        async () => {
+            const usersAtStart = await helper.usersInDb()
+
+            const newUser = {
+                username: 't',
+                name: 'Thomas the Cat',
+                password: 'Tom',
+            }
+
+            const result = await api
+                .post('/api/users')
+                .send(newUser)
+                .expect(400)
+                .expect('Content-Type', /application\/json/)
+
+            expect(result.body.error).toContain('Username must be at least 3 characters long')
+
+            const usersAtEnd = await helper.usersInDb()
+            expect(usersAtEnd).toEqual(usersAtStart)
+        }
+    )
+
+    test('creation fails with status code 400 and message if username is not given',
+        async () => {
+            const usersAtStart = await helper.usersInDb()
+
+            const newUser = {
+                name: 'Thomas the Cat',
+                password: 'Tom',
+            }
+
+            const result = await api
+                .post('/api/users')
+                .send(newUser)
+                .expect(400)
+                .expect('Content-Type', /application\/json/)
+
+            expect(result.body.error).toContain('Username is required')
+
+            const usersAtEnd = await helper.usersInDb()
+            expect(usersAtEnd).toEqual(usersAtStart)
+        }
+    )
+
+    test('creation fails with status code 400 and message if password is not at least 3 characters long',
+        async () => {
+            const usersAtStart = await helper.usersInDb()
+
+            const newUser = {
+                username: 'tom',
+                name: 'Thomas the Cat',
+                password: 'To',
+            }
+
+            const result = await api
+                .post('/api/users')
+                .send(newUser)
+                .expect(400)
+                .expect('Content-Type', /application\/json/)
+
+            expect(result.body.error).toContain('Password must be at least 3 characters long')
+
+            const usersAtEnd = await helper.usersInDb()
+            expect(usersAtEnd).toEqual(usersAtStart)
+        }
+    )
+
+    test('creation fails with status code 400 and message if password is not given',
+        async () => {
+            const usersAtStart = await helper.usersInDb()
+
+            const newUser = {
+                username: 'tom',
+                name: 'Thomas the Cat',
+            }
+
+            const result = await api
+                .post('/api/users')
+                .send(newUser)
+                .expect(400)
+                .expect('Content-Type', /application\/json/)
+
+            expect(result.body.error).toContain('Password is required')
+
+            const usersAtEnd = await helper.usersInDb()
+            expect(usersAtEnd).toEqual(usersAtStart)
+        }
+    )
+
 })
 
 afterAll(async () => {
