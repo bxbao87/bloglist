@@ -3,29 +3,7 @@ GET http://localhost:3003/api/blogs
 ###
 POST http://localhost:3003/api/blogs
 Content-Type: application/json
-
-{
-    "title": "Harry Potter",
-    "author": "Rowling",
-    "url": "https://vi.wikipedia.org/wiki/Harry_Potter",
-    "likes": 100
-}
-
-###
-POST http://localhost:3003/api/blogs
-Content-Type: application/json
-
-{
-    "title": "Doraemon",
-    "author": "Fujiko Fujio",
-    "url": "https://en.wikipedia.org/wiki/Doraemon_(character)",
-    "likes": 1000
-}
-
-
-###
-POST http://localhost:3003/api/blogs
-Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImZ1bGxzdGFjayIsImlkIjoiNjQ0ZmQwZDUzOGYyYzc1OTM3YjU2MWE2IiwiaWF0IjoxNjgzMDQ2ODc0LCJleHAiOjE2ODMwNTA0NzR9.YkD1E_vbSyApPkjzyi7fRqv4IW9XaqwZ16OT3swf4xQ
 
 {
     "title": "A Brief History of Time",
