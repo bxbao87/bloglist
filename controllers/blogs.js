@@ -3,6 +3,7 @@ const blogRouter = require('express').Router()
 const Blog = require('../models/blog')
 const User = require('../models/user')
 const logger = require('../utils/logger')
+const userExtractor = require('../utils/middleware').userExtractor
 
 blogRouter.get('/',  async (request, response) => {
     let blogs = await Blog
@@ -13,19 +14,10 @@ blogRouter.get('/',  async (request, response) => {
     response.json(blogs)
 })
 
-blogRouter.post('/', async (request, response) => {
+blogRouter.post('/', userExtractor, async (request, response) => {
+    const user = request.user
+
     const body = request.body
-    // logger.info(request.token)
-
-    const decodedToken = jwt.verify(request.token, process.env.SECRET)
-    // logger.info(decodedToken)
-
-    if (!decodedToken.id) {
-        return response.status(401).json({ error: 'token invalid '})
-    } 
-
-    const user = await User.findById(decodedToken.id)
-
     const blog = new Blog({
         title: body.title,
         author: body.author,
@@ -41,21 +33,15 @@ blogRouter.post('/', async (request, response) => {
     response.status(201).json(savedBlog)
 })
 
-blogRouter.delete('/:id', async (request, response) => {    
-    const decodedToken = jwt.verify(request.token, process.env.SECRET)
-    if (!decodedToken.id) // no user id
-        return response.status(401).json({ error: 'token invalid' })
-
-    const user = await User.findById(decodedToken.id)
-    if (!user)
-        return response.status(401).json({ error: 'token invalid' })
+blogRouter.delete('/:id', userExtractor, async (request, response) => {    
+    const user = request.user
 
     const id = request.params.id
     const blog = await Blog.findById(id)
     if (!blog) // no blog
         return response.status(400).send({ error: 'invalid id' })
 
-    if (blog.user.toString() !== user.id.toString()) // no permission
+    if (!blog.user || blog.user.toString() !== user.id.toString()) // no permission
         return response.status(403).send({ error: 'Only creator can delete'})
         
     await Blog.findByIdAndRemove(id) // remove it
