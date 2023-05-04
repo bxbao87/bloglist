@@ -10,8 +10,28 @@ const Blog = require('../models/blog')
 const User = require('../models/user')
 
 beforeEach(async () => {
+    // clear database
+    await User.deleteMany({})
     await Blog.deleteMany({})
-    await Blog.insertMany(helper.initialBlogs)
+
+    // save a user
+    const passwordHash = await bcrypt.hash(helper.rootUser.password, 10)
+    const user = new User({ username: helper.rootUser.username, passwordHash })
+    const savedUser = await user.save()
+
+    // add user id to all blogs
+    const blogs = helper.initialBlogs
+    for(let blog of blogs) {
+        blog.user = savedUser._id
+    }
+
+    // add blogs
+    let response = await Blog.insertMany(blogs)
+
+    // add blogs id to user
+    const ids = response.insertedIds
+    savedUser.blogs = savedUser.blogs.concat(ids)
+    await savedUser.save()
 })
 
 test('blogs are returned as json', async () => {
@@ -30,6 +50,11 @@ test('unique identifier property of the blog posts is named id', async () => {
 }, 100000)
 
 test('a valid blog can be added', async () => {
+    const blogsAtStart = await helper.blogsInDb()
+
+    const users = await helper.usersInDb()
+    const token = helper.getToken(users[0])
+
     const newBlog = {
         "title": "Fullstackopen",
         "author": "University of Helsinki",
@@ -39,6 +64,7 @@ test('a valid blog can be added', async () => {
 
     await api
         .post('/api/blogs')
+        .set('Authorization', 'Bearer ' + token)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
@@ -46,7 +72,7 @@ test('a valid blog can be added', async () => {
     const blogsAtEnd = await helper.blogsInDb()
     const titles = blogsAtEnd.map(b => b.title)
 
-    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length + 1)
+    expect(blogsAtEnd).toHaveLength(blogsAtStart.length + 1)
     expect(titles).toContain(
         'Fullstackopen'
     )
@@ -54,6 +80,9 @@ test('a valid blog can be added', async () => {
 
 test('if the likes property is missing from the request, it will default to the value 0',
     async () => {
+        const users = await helper.usersInDb()
+        const token = helper.getToken(users[0])
+    
         const newBlog = {
             "title": "Fullstackopen",
             "author": "University of Helsinki",
@@ -62,6 +91,7 @@ test('if the likes property is missing from the request, it will default to the 
 
         await api
             .post('/api/blogs')
+            .set('Authorization', 'Bearer ' + token)
             .send(newBlog)
             .expect(201)
             .expect('Content-Type', /application\/json/)
@@ -74,6 +104,9 @@ test('if the likes property is missing from the request, it will default to the 
 
 describe("creating new blogs with response status code 400", () => {
     test('if the title property is missing', async () => {
+        const users = await helper.usersInDb()
+        const token = helper.getToken(users[0])
+
         const newBlog = {
             "author": "University of Helsinki",
             "url": "https://fullstackopen.com/en/part4/testing_the_backend#exercises-4-8-4-12",
@@ -82,12 +115,16 @@ describe("creating new blogs with response status code 400", () => {
 
         await api
             .post('/api/blogs')
+            .set('Authorization', 'Bearer ' + token)
             .send(newBlog)
             .expect(400)
             
     }, 100000)
 
     test('if the author property is missing', async () => {
+        const users = await helper.usersInDb()
+        const token = helper.getToken(users[0])
+
         const newBlog = {
             "title": "Testing the backend",
             "url": "https://fullstackopen.com/en/part4/testing_the_backend#exercises-4-8-4-12",
@@ -96,6 +133,7 @@ describe("creating new blogs with response status code 400", () => {
 
         await api
             .post('/api/blogs')
+            .set('Authorization', 'Bearer ' + token)
             .send(newBlog)
             .expect(400)
             
@@ -108,8 +146,12 @@ describe('delete a single blog post resource', () => {
         const blogsAtStart = await helper.blogsInDb()
         const blogToDelete = blogsAtStart[0]
 
+        let user = await User.findById(blogToDelete.user)
+        const token = helper.getToken(user)
+
         await api
             .delete(`/api/blogs/${blogToDelete.id}`)
+            .set('Authorization', 'Bearer ' + token)
             .expect(204)
 
         const blogsAtEnd = await helper.blogsInDb()
@@ -125,8 +167,12 @@ describe('delete a single blog post resource', () => {
 
         const id = await helper.nonExistingId()
 
+        let user = await helper.usersInDb()
+        const token = helper.getToken(user[0])
+
         await api
             .delete(`/api/blogs/${id}`)
+            .set('Authorization', 'Bearer ' + token)
             .expect(204)
 
         const blogsAtEnd = await helper.blogsInDb()
@@ -201,13 +247,6 @@ describe('Update post', () => {
 })
 
 describe('when there is initially one user in db', () => {
-    beforeEach(async () => {
-        await User.deleteMany({})
-        const passwordHash = await bcrypt.hash('c0nf!d3nti@1', 10)
-        const user = new User({ username: 'root', passwordHash })
-
-        await user.save()
-    })
 
     test('creation succeeds with a fresh username', async () => {
         const usersAtStart = await helper.usersInDb()
@@ -344,6 +383,24 @@ describe('when there is initially one user in db', () => {
         }
     )
 
+})
+
+test('add a blog fails with status code 401 Unauthorization if a token is not provided', async () => {
+    const blogsAtStart = await helper.blogsInDb()
+    const newBlog = {
+        "title": "Fullstackopen",
+        "author": "University of Helsinki",
+        "url": "https://fullstackopen.com/en/part4/testing_the_backend#exercises-4-8-4-12",
+        "likes": 9999
+    }
+
+    let response = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(401)
+        .expect('Content-Type', /application\/json/)
+
+    expect(response.body.error).toBe('invalid token')
 })
 
 afterAll(async () => {

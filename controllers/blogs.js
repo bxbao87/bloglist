@@ -39,7 +39,7 @@ blogRouter.delete('/:id', userExtractor, async (request, response) => {
     const id = request.params.id
     const blog = await Blog.findById(id)
     if (!blog) // no blog
-        return response.status(400).send({ error: 'invalid id' })
+        return response.status(204).end()
 
     if (!blog.user || blog.user.toString() !== user.id.toString()) // no permission
         return response.status(403).send({ error: 'Only creator can delete'})
